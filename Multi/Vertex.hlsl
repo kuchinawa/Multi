@@ -13,6 +13,7 @@
 cbuffer Object
 {
     float4x4 WorldViewProj;
+    bool protagonista;
 };
 
 struct VertexIn
@@ -35,7 +36,11 @@ VertexOut main(VertexIn vin)
     vout.PosH = mul(float4(vin.PosL, 1.0f), WorldViewProj);
 
     // apenas passa a cor do vértice para o pixel shader
-    vout.Color = vin.Color;
+    if (protagonista) {
+        vout.Color = float4(1.0f, 0.0f, 0.5f, 1.0f);
+    }else{
+        vout.Color = vin.Color;
+    }
 
     return vout;
 }

@@ -1,14 +1,3 @@
-/**********************************************************************************
-// Multi (Código Fonte)
-//
-// Criação:     27 Abr 2016
-// Atualização: 15 Set 2023
-// Compilador:  Visual C++ 2022
-//
-// Descrição:   Constrói cena usando vários buffers, um por objeto
-//
-**********************************************************************************/
-
 #include "DXUT.h"
 #include <fstream>
 #include <sstream>
@@ -22,6 +11,8 @@ struct ObjectConstants
       0.0f, 1.0f, 0.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 0.0f, 1.0f };
+
+	uint seraSelecionada = 0;
 };
 
 // ------------------------------------------------------------------------------
@@ -47,6 +38,9 @@ private:
 	XMFLOAT4X4 tres = {};
 
 	XMFLOAT4X4 ortogonal = {};
+
+    int selecionada  = 0;
+    bool telatoda = false;
 
 
     float theta = 0;
@@ -156,20 +150,20 @@ void Multi::Init()
         1.0f, 100.0f));
 
     XMStoreFloat4x4(&ortogonal, XMMatrixOrthographicLH(
-		5, 5, 1.0f, 110.0f));
+		5*window->AspectRatio(), 5, 1.0f, 110.0f));
 
     XMStoreFloat4x4(&um, XMMatrixLookAtLH(
-		XMVectorSet(0.0f, 0.1f, -5.0f, 1.0f),
+		XMVectorSet(0.0f, 1.5f, -5.0f, 1.0f), //como o z ta negativo, estamos vendo de frente kk
 		XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f),
 		XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 
     XMStoreFloat4x4(&dois, XMMatrixLookAtLH(
         XMVectorSet(0.0f, +5.0f, 0.0f, 1.0f),
-        XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f),
+		XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), //olhando para baixo
         XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)));
 
     XMStoreFloat4x4(&tres, XMMatrixLookAtLH(
-        XMVectorSet(-5.0f, 0.1f, 0.0f, 1.0f),
+		XMVectorSet(-5.0f, 1.5f, 0.0f, 1.0f), //olhando de lado e de por positivo olha do oturo lado kkk
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f),
         XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 
@@ -311,12 +305,12 @@ void Multi::Update(){
 
     if (input->KeyPress('1')) {
         Object meshO;
-        CarregarObjetos("ball.obj", meshO, XMFLOAT4 (Colors::Chocolate));
+        CarregarObjetos("ball.obj", meshO, XMFLOAT4(Colors::Chocolate));
         scene.push_back(meshO);
     }
     if (input->KeyPress('2')) {
         Object meshO;
-        CarregarObjetos("capsule.obj", meshO, XMFLOAT4 (Colors::ForestGreen));
+        CarregarObjetos("capsule.obj", meshO, XMFLOAT4(Colors::ForestGreen));
         scene.push_back(meshO);
     }
     if (input->KeyPress('3')) {
@@ -334,6 +328,188 @@ void Multi::Update(){
         CarregarObjetos("thorus.obj", meshO, XMFLOAT4(Colors::PaleGoldenrod));
         scene.push_back(meshO);
     }
+	if (input->KeyPress(VK_DELETE)) {
+		if (scene.size() > 0) {
+			delete scene.at(selecionada).mesh;
+            scene.erase(scene.begin() + selecionada);
+            if (selecionada >= scene.size()) {
+                selecionada = 0;
+            }
+		}
+	}
+
+    if (input->KeyPress(VK_TAB)) {
+        if (!scene.empty()) {
+
+            selecionada += 1;
+            if (selecionada >= scene.size()) {
+
+                selecionada = 0;
+            }
+
+        
+		}
+	}
+
+
+    if (input->KeyPress('V')) {
+        if (telatoda) {
+            telatoda = false;
+        }
+        else {
+			telatoda = true;
+
+        }
+	}
+	graphics->ResetCommands();
+
+    if (input->KeyPress('B')) {
+        Box box(2.0f, 2.0f, 2.0f);
+        Object boxObj;
+        XMStoreFloat4x4(&boxObj.world,
+            XMMatrixScaling(0.4f, 0.4f, 0.4f) *
+            XMMatrixTranslation(0.0f, 0.4f, 0.0f));
+
+        boxObj.mesh = new Mesh();
+        boxObj.mesh->VertexBuffer(box.VertexData(), box.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+        boxObj.mesh->IndexBuffer(box.IndexData(), box.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+        boxObj.mesh->ConstantBuffer(sizeof(ObjectConstants), 4);
+        boxObj.submesh.indexCount = box.IndexCount();
+        scene.push_back(boxObj);
+    }
+	if (input->KeyPress('C')) {
+		Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20);
+		Object cylinderObj;
+		XMStoreFloat4x4(&cylinderObj.world,
+			XMMatrixScaling(0.5f, 0.5f, 0.5f)*
+			XMMatrixTranslation(0.0f, 0.7f, 0.0f)
+        );
+
+		cylinderObj.mesh = new Mesh();
+		cylinderObj.mesh->VertexBuffer(cylinder.VertexData(), cylinder.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+		cylinderObj.mesh->IndexBuffer(cylinder.IndexData(), cylinder.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+		cylinderObj.mesh->ConstantBuffer(sizeof(ObjectConstants), 4);
+		cylinderObj.submesh.indexCount = cylinder.IndexCount();
+		scene.push_back(cylinderObj);
+	}
+
+	if (input->KeyPress('S')) {
+		Sphere sphere(1.0f, 20, 20);
+		Object sphereObj;
+		XMStoreFloat4x4(&sphereObj.world,
+			XMMatrixScaling(0.5f, 0.5f, 0.5f) *
+			XMMatrixTranslation(0.0f, 0.5f, 0.0f));
+
+		sphereObj.mesh = new Mesh();
+		sphereObj.mesh->VertexBuffer(sphere.VertexData(), sphere.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+		sphereObj.mesh->IndexBuffer(sphere.IndexData(), sphere.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+		sphereObj.mesh->ConstantBuffer(sizeof(ObjectConstants), 4);
+		sphereObj.submesh.indexCount = sphere.IndexCount();
+		scene.push_back(sphereObj);
+	}
+    if (input->KeyPress('G')) {
+        GeoSphere geoSphere(1.0f, 3);
+        Object geoSphereObj;
+        geoSphereObj.mesh = new Mesh();
+        geoSphereObj.world = Identity;
+        geoSphereObj.mesh->VertexBuffer(geoSphere.VertexData(), geoSphere.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+        geoSphereObj.mesh->IndexBuffer(geoSphere.IndexData(), geoSphere.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+        geoSphereObj.mesh->ConstantBuffer(sizeof(ObjectConstants), 4);
+        geoSphereObj.submesh.indexCount = geoSphere.IndexCount();
+        scene.push_back(geoSphereObj);
+    }
+
+	if (input->KeyPress('P')) {
+		Grid grid(3.0f, 3.0f, 20, 20);
+		Object gridObj;
+		gridObj.mesh = new Mesh();
+		gridObj.world = Identity;
+		gridObj.mesh->VertexBuffer(grid.VertexData(), grid.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+		gridObj.mesh->IndexBuffer(grid.IndexData(), grid.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+		gridObj.mesh->ConstantBuffer(sizeof(ObjectConstants), 4);
+		gridObj.submesh.indexCount = grid.IndexCount();
+		scene.push_back(gridObj);
+	}
+
+    if (input->KeyPress('Q')) {
+		Quad quad(2.0f, 2.0f);
+		Object quadObj;
+		quadObj.mesh = new Mesh();
+		quadObj.world = Identity;
+		quadObj.mesh->VertexBuffer(quad.VertexData(), quad.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+		quadObj.mesh->IndexBuffer(quad.IndexData(), quad.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+		quadObj.mesh->ConstantBuffer(sizeof(ObjectConstants), 4);
+		quadObj.submesh.indexCount = quad.IndexCount();
+		scene.push_back(quadObj);
+
+    }
+
+
+
+	graphics->SubmitCommands();
+
+    if (input->KeyPress(102)) {//6
+		XMFLOAT4X4 leste = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixTranslation(0.1f, 0.0f, 0.0f) * XMLoadFloat4x4(&leste));
+    }
+	if (input->KeyPress(100)) {//4
+		XMFLOAT4X4 oeste = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixTranslation(-0.1f, 0.0f, 0.0f)* XMLoadFloat4x4(&oeste));
+	}
+	if (input->KeyPress(104)) {//8
+		XMFLOAT4X4 norte = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixTranslation(0.0f, 0.0f, 0.1f)* XMLoadFloat4x4(&norte));
+	}
+	if (input->KeyPress(98)) {//2
+		XMFLOAT4X4 sul = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixTranslation(0.0f, 0.0f, -0.1f) * XMLoadFloat4x4(&sul));
+	}
+	if (input->KeyPress(101)) {//5
+		XMFLOAT4X4 cima = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixTranslation(0.0f, 0.1f, 0.0f)* XMLoadFloat4x4(&cima));
+	}
+	if (input->KeyPress(96)) {//0
+		XMFLOAT4X4 baixo = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixTranslation(0.0f, -0.1f, 0.0f)* XMLoadFloat4x4(&baixo));
+	}
+    if (input->KeyPress(33)) {//+
+		XMFLOAT4X4 escala = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixScaling(1.1f, 1.1f, 1.1f)* XMLoadFloat4x4(&escala));
+    }
+	if (input->KeyPress(34)) {//-
+		XMFLOAT4X4 escala = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixScaling(0.9f, 0.9f, 0.9f)* XMLoadFloat4x4(&escala));
+	}
+	if (input->KeyPress(107)) {//+
+		XMFLOAT4X4 rotacao = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixRotationY(0.1f)* XMLoadFloat4x4(&rotacao));
+	}
+	if (input->KeyPress(109)) {//-
+		XMFLOAT4X4 rotacao = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixRotationY(-0.1f)* XMLoadFloat4x4(&rotacao));
+	}
+	if (input->KeyPress(111)) {///
+		XMFLOAT4X4 rotacao = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixRotationX(0.1f)* XMLoadFloat4x4(&rotacao));
+	}
+	if (input->KeyPress(106)) {//*
+		XMFLOAT4X4 rotacao = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixRotationX(-0.1f)* XMLoadFloat4x4(&rotacao));
+	}
+	if (input->KeyPress(105)) {//9
+		XMFLOAT4X4 rotacao = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixRotationZ(0.1f)* XMLoadFloat4x4(&rotacao));
+	}
+	if (input->KeyPress(97)) {//1
+		XMFLOAT4X4 rotacao = scene[selecionada].world;
+		XMStoreFloat4x4(&scene[selecionada].world, XMMatrixRotationZ(-0.1f)* XMLoadFloat4x4(&rotacao));
+	}
+	if (input->KeyPress(35)) {//1 do num
+		XMFLOAT4X4 identidade = Identity;
+		XMStoreFloat4x4(&scene[selecionada].world, XMLoadFloat4x4(&identidade));
+	}
+
+
 
     // sai com o pressionamento da tecla ESC
     if (input->KeyPress(VK_ESCAPE))
@@ -399,14 +575,21 @@ void Multi::Update(){
     XMMATRIX proj = XMLoadFloat4x4(&Proj);
 
     // modifica matriz de mundo da esfera
+    /*
     XMStoreFloat4x4(&scene[2].world,
         XMMatrixScaling(0.5f, 0.5f, 0.5f) *
         XMMatrixRotationY(float(timer.Elapsed())) *
         XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-
+    */
     // ajusta o buffer constante de cada objeto
-    for (auto & obj : scene)
-    {
+    int i = 0;
+    for (auto & obj : scene){
+       
+        bool holofote = false;
+		if (i == selecionada) {
+			holofote = true;
+		}
+        i++;
         // carrega matriz de mundo em uma XMMATRIX
         XMMATRIX world = XMLoadFloat4x4(&obj.world);      
 
@@ -415,15 +598,20 @@ void Multi::Update(){
 
         // atualiza o buffer constante com a matriz combinada
         ObjectConstants constants;
+		constants.seraSelecionada = holofote;
         XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
         obj.mesh->CopyConstants(&constants, 0);
 
         
 		//proj = XMLoadFloat4x4(&ortogonal);
-            
+
+        //WorldViewProj = world * XMLoadFloat4x4(&um) * proj;
+
+
 		WorldViewProj = world * XMLoadFloat4x4(&um) * XMLoadFloat4x4(&ortogonal);
 
         ObjectConstants constants2;
+		constants2.seraSelecionada = holofote;
 
         XMStoreFloat4x4(&constants2.WorldViewProj, XMMatrixTranspose(WorldViewProj));
         obj.mesh->CopyConstants(&constants2, 1);
@@ -432,6 +620,7 @@ void Multi::Update(){
         WorldViewProj = world * XMLoadFloat4x4(&dois) * XMLoadFloat4x4(&ortogonal);
 
         ObjectConstants constants3;
+		constants3.seraSelecionada = holofote;
 
         XMStoreFloat4x4(&constants3.WorldViewProj, XMMatrixTranspose(WorldViewProj));
         obj.mesh->CopyConstants(&constants3, 2);
@@ -439,6 +628,7 @@ void Multi::Update(){
         WorldViewProj = world * XMLoadFloat4x4(&tres) * XMLoadFloat4x4(&ortogonal);
 
         ObjectConstants constants4;
+		constants4.seraSelecionada = holofote;
 
         XMStoreFloat4x4(&constants4.WorldViewProj, XMMatrixTranspose(WorldViewProj));
         obj.mesh->CopyConstants(&constants4, 3);
@@ -450,27 +640,17 @@ void Multi::Update(){
 void Multi::Draw()
 {
     // limpa o backbuffer
-    graphics->Clear(pipelineStateLinhas);
+    graphics->Clear(pipelineStateLinhas); // nhame nhame linhas papilanas
 
 
+	if (telatoda) {
+		graphics->CommandList()->SetPipelineState(pipelineState);
+        graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
+        ID3D12DescriptorHeap* descriptorHeap = linhas.ConstantBufferHeap();
+        graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
 
-	// desenha linhas
-    graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
-    ID3D12DescriptorHeap* descriptorHeap = linhas.ConstantBufferHeap();
-    graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
-    graphics->CommandList()->SetGraphicsRootDescriptorTable(0, linhas.ConstantBufferHandle(0));
-    graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-    graphics->CommandList()->IASetVertexBuffers(0, 1, linhas.VertexBufferView());
-    graphics->CommandList()->DrawInstanced(4, 1, 0, 0);
-	graphics->CommandList()->SetPipelineState(pipelineState);
-  
-    //desenha as viewport
-    for (int i = 0; i < 4; i++) {
-        graphics->CommandList()->RSSetViewports(1, &viewports[i]);
 
-        // desenha objetos da cena
-        for (auto& obj : scene)
-        {
+        for (auto& obj : scene){
             // comandos de configuração do pipeline
             ID3D12DescriptorHeap* descriptorHeap = obj.mesh->ConstantBufferHeap();
             graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
@@ -479,7 +659,7 @@ void Multi::Draw()
             graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             // ajusta o buffer constante associado ao vertex shader
-            graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(i));
+            graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(0));
 
             // desenha objeto
             graphics->CommandList()->DrawIndexedInstanced(
@@ -488,7 +668,45 @@ void Multi::Draw()
                 obj.submesh.baseVertex,
                 0);
         }
-    }
+	}
+	else {
+        // desenha linhas
+        graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
+        ID3D12DescriptorHeap* descriptorHeap = linhas.ConstantBufferHeap();
+        graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
+        graphics->CommandList()->SetGraphicsRootDescriptorTable(0, linhas.ConstantBufferHandle(0));
+        graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+        graphics->CommandList()->IASetVertexBuffers(0, 1, linhas.VertexBufferView());
+        graphics->CommandList()->DrawInstanced(4, 1, 0, 0);
+        graphics->CommandList()->SetPipelineState(pipelineState); // nhumm voltou a ser triangulo
+
+        //desenha as viewport
+        for (int i = 0; i < 4; i++) {
+            graphics->CommandList()->RSSetViewports(1, &viewports[i]);
+
+            // desenha objetos da cena
+            for (auto& obj : scene)
+            {
+                // comandos de configuração do pipeline
+                ID3D12DescriptorHeap* descriptorHeap = obj.mesh->ConstantBufferHeap();
+                graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
+                graphics->CommandList()->IASetVertexBuffers(0, 1, obj.mesh->VertexBufferView());
+                graphics->CommandList()->IASetIndexBuffer(obj.mesh->IndexBufferView());
+                graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+                // ajusta o buffer constante associado ao vertex shader
+                graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(i));
+
+                // desenha objeto
+                graphics->CommandList()->DrawIndexedInstanced(
+                    obj.submesh.indexCount, 1,
+                    obj.submesh.startIndex,
+                    obj.submesh.baseVertex,
+                    0);
+            }
+        }
+	}
+	
 
 
     // apresenta o backbuffer na tela
@@ -681,7 +899,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         engine->window->Mode(WINDOWED);
         engine->window->Size(1024, 720);
         engine->window->Color(25, 25, 25);
-        engine->window->Title("Multi");
+        engine->window->Title("Multii");
         engine->window->Icon(IDI_ICON);
         engine->window->Cursor(IDC_CURSOR);
         engine->window->LostFocus(Engine::Pause);
